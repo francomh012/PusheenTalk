@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 
 const BUTTON_MAX_DIAMETER = 52
 const BUTTON_GAP = 14
-const TOP_MARGIN = 16
+const TOP_MARGIN = 28 // separación del borde superior — deja aire para notch/cámara en mobile, dentro del área de pared
 const BG_CIRCLE_COLOR = 0x000000
 const BG_CIRCLE_ALPHA = 0.25
 const ACTIVE_BORDER_COLOR = 0xffffff
@@ -73,10 +73,17 @@ export class RoomSelector {
     this.entries.forEach(({ bg, icon, ring }) => {
       bg.setRadius(radius)
       bg.setPosition(x, y)
+      // Circle usa origin centrado (0.5, 0.5) igual que Sprite: el hit area
+      // se evalúa en espacio local top-left (Phaser le suma displayOriginX/Y
+      // al punto antes de testear), así que el centro del hit area debe ir
+      // en (radius, radius), no en (0, 0) — si no, ningún tap cae dentro.
       if (bg.input) {
-        bg.input.hitArea.setTo(0, 0, radius)
+        bg.input.hitArea.setTo(radius, radius, radius)
       } else {
-        bg.setInteractive(new Phaser.Geom.Circle(0, 0, radius), Phaser.Geom.Circle.Contains)
+        bg.setInteractive(
+          new Phaser.Geom.Circle(radius, radius, radius),
+          Phaser.Geom.Circle.Contains
+        )
       }
 
       // El PNG ya es circular y cuadrado (1:1), así que basta con un
@@ -103,6 +110,7 @@ export class RoomSelector {
     if (roomId === this.activeRoomId) return
     this.activeRoomId = roomId
     this.refreshStyles()
+    console.log('[RoomSelector] room:changed ->', roomId) // TODO: quitar una vez confirmado en el navegador
     this.eventBus.emit('room:changed', { roomId })
   }
 
