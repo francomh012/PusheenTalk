@@ -5,15 +5,16 @@ const EDGE_MARGIN = 24 // px mínimos libres a cada lado; solo entra en juego en
 
 /**
  * MainScene.js
- * Solo presentación: dibuja a Pusheen, maneja input y tweens. No sabe nada
- * de estado de juego — al detectar el poke, avisa por el EventBus y deja
- * que Pusheen.js (entities) decida qué significa.
+ * Solo presentación: dibuja el fondo y a Pusheen, maneja input y tweens.
+ * No sabe nada de estado de juego — al detectar el poke, avisa por el
+ * EventBus y deja que Pusheen.js (entities) decida qué significa.
  */
 export class MainScene extends Phaser.Scene {
   /** @param {import('../core/EventBus.js').EventBus} eventBus */
   constructor(eventBus) {
     super('MainScene')
     this.eventBus = eventBus
+    this.background = null
     this.pusheenSprite = null
     this.baseScale = 1
     this.idleTween = null
@@ -21,6 +22,11 @@ export class MainScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale
+
+    // Se agrega primero para quedar detrás de Pusheen (orden de inserción = orden de render).
+    const background = this.add.image(width / 2, height / 2, 'bedroom-bg')
+    this.background = background
+    this.applyCoverScale(background, width, height)
 
     const sprite = this.add.sprite(width / 2, height / 2, 'pusheen')
 
@@ -35,6 +41,17 @@ export class MainScene extends Phaser.Scene {
     this.startIdleAnimation()
 
     this.scale.on('resize', this.handleResize, this)
+  }
+
+  /**
+   * Escala "cover": cubre toda la pantalla sin distorsionar proporciones,
+   * recortando el sobrante. Se usa el mayor de los dos ratios (ancho y
+   * alto) para que ningún lado quede con espacio vacío.
+   */
+  applyCoverScale(image, screenWidth, screenHeight) {
+    const coverScale = Math.max(screenWidth / image.width, screenHeight / image.height)
+    image.setScale(coverScale)
+    image.setPosition(screenWidth / 2, screenHeight / 2)
   }
 
   /**
@@ -83,6 +100,10 @@ export class MainScene extends Phaser.Scene {
 
   handleResize(gameSize) {
     if (!this.pusheenSprite) return
+
+    if (this.background) {
+      this.applyCoverScale(this.background, gameSize.width, gameSize.height)
+    }
 
     this.baseScale = this.computeBaseScale(gameSize.width, this.pusheenSprite.width)
 
