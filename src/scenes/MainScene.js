@@ -1,8 +1,7 @@
 import Phaser from 'phaser'
 
-const PUSHEEN_WIDTH_RATIO = 0.45 // proporción de this.scale.width que ocupa Pusheen, en cualquier dispositivo
-const PUSHEEN_MAX_WIDTH = 640 // tope en px — cerca de la resolución nativa del PNG (675px), evita upscale/blur en pantallas muy anchas
-const EDGE_MARGIN = 24 // px mínimos libres a cada lado, para que nunca se corte en pantallas angostas
+const PUSHEEN_TARGET_WIDTH = 240 // px fijo — tamaño visual consistente en cualquier dispositivo, no proporcional a la pantalla
+const EDGE_MARGIN = 24 // px mínimos libres a cada lado; solo entra en juego en pantallas más angostas que el target + margen
 
 /**
  * MainScene.js
@@ -39,17 +38,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   /**
-   * El ancho objetivo es siempre una proporción de this.scale.width (no del
-   * tamaño original del PNG), así el sprite se ve igual de grande en
-   * cualquier dispositivo. Se acota con un tope absoluto (evita upscale más
-   * allá de la resolución nativa en pantallas muy anchas) y con un margen
-   * de borde (evita que se corte en pantallas angostas).
+   * Ancho objetivo fijo en px (no proporcional a this.scale.width): un %
+   * de pantalla crece con el ancho, así que en laptop/desktop terminaba
+   * mucho más grande en píxeles absolutos que en mobile aunque el % fuera
+   * el mismo. Con un target fijo, Pusheen mide igual en cualquier
+   * dispositivo — solo se reduce si la pantalla es más angosta que el
+   * target + margen, para no cortarse en mobile muy chico.
    */
   computeBaseScale(screenWidth, textureWidth) {
-    let targetWidth = screenWidth * PUSHEEN_WIDTH_RATIO
-    targetWidth = Math.min(targetWidth, PUSHEEN_MAX_WIDTH)
-    targetWidth = Math.min(targetWidth, screenWidth - EDGE_MARGIN * 2)
-
+    const targetWidth = Math.min(PUSHEEN_TARGET_WIDTH, screenWidth - EDGE_MARGIN * 2)
     return targetWidth / textureWidth
   }
 
