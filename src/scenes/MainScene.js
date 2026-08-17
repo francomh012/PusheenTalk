@@ -1,7 +1,10 @@
 import Phaser from 'phaser'
 
-const PUSHEEN_WIDTH_RATIO = 0.62 // proporción del lado menor de pantalla que ocupa Pusheen
+const MOBILE_BREAKPOINT = 700 // px, lado menor de pantalla — por debajo de esto se considera mobile
+const PUSHEEN_WIDTH_RATIO_MOBILE = 0.95 // proporción del lado menor en mobile — grande, el margen de seguridad la recorta si hace falta
+const PUSHEEN_WIDTH_RATIO_DESKTOP = 0.62 // proporción del lado menor en desktop
 const PUSHEEN_MAX_WIDTH = 480 // tope en px para que no quede gigante en pantallas grandes
+const EDGE_MARGIN = 24 // px mínimos libres a cada lado, para que nunca se corte en pantallas angostas
 
 /**
  * MainScene.js
@@ -39,12 +42,23 @@ export class MainScene extends Phaser.Scene {
 
   /**
    * El ancho objetivo se calcula sobre el lado menor de la pantalla (no un
-   * px fijo), así ocupa una porción cómoda tanto en mobile portrait como
-   * en desktop, con un tope para que no se vuelva gigante en pantallas anchas.
+   * px fijo). En mobile usa una proporción mucho mayor para que Pusheen se
+   * vea prominente; en desktop una proporción menor con tope absoluto para
+   * que no quede gigante en pantallas anchas. En todos los casos se acota
+   * contra el ancho real de pantalla menos un margen, para que nunca se
+   * corte en los bordes de pantallas angostas.
    */
   computeBaseScale(screenWidth, screenHeight, textureWidth) {
-    const availableWidth = Math.min(screenWidth, screenHeight) * PUSHEEN_WIDTH_RATIO
-    const targetWidth = Math.min(availableWidth, PUSHEEN_MAX_WIDTH)
+    const minDimension = Math.min(screenWidth, screenHeight)
+    const isMobile = minDimension < MOBILE_BREAKPOINT
+    const ratio = isMobile ? PUSHEEN_WIDTH_RATIO_MOBILE : PUSHEEN_WIDTH_RATIO_DESKTOP
+
+    let targetWidth = minDimension * ratio
+    if (!isMobile) {
+      targetWidth = Math.min(targetWidth, PUSHEEN_MAX_WIDTH)
+    }
+    targetWidth = Math.min(targetWidth, screenWidth - EDGE_MARGIN * 2)
+
     return targetWidth / textureWidth
   }
 
