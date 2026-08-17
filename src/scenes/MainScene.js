@@ -1,9 +1,7 @@
 import Phaser from 'phaser'
 
-const MOBILE_BREAKPOINT = 700 // px, lado menor de pantalla — por debajo de esto se considera mobile
-const PUSHEEN_WIDTH_RATIO_MOBILE = 0.95 // proporción del lado menor en mobile — grande, el margen de seguridad la recorta si hace falta
-const PUSHEEN_WIDTH_RATIO_DESKTOP = 0.62 // proporción del lado menor en desktop
-const PUSHEEN_MAX_WIDTH = 480 // tope en px para que no quede gigante en pantallas grandes
+const PUSHEEN_WIDTH_RATIO = 0.45 // proporción de this.scale.width que ocupa Pusheen, en cualquier dispositivo
+const PUSHEEN_MAX_WIDTH = 640 // tope en px — cerca de la resolución nativa del PNG (675px), evita upscale/blur en pantallas muy anchas
 const EDGE_MARGIN = 24 // px mínimos libres a cada lado, para que nunca se corte en pantallas angostas
 
 /**
@@ -27,10 +25,10 @@ export class MainScene extends Phaser.Scene {
 
     const sprite = this.add.sprite(width / 2, height / 2, 'pusheen')
 
-    this.baseScale = this.computeBaseScale(width, height, sprite.width)
+    this.baseScale = this.computeBaseScale(width, sprite.width)
     sprite.setScale(this.baseScale)
 
-    sprite.setInteractive({ useHandCursor: true }) // hit area = bounding box del sprite, se ajusta sola con el scale actual en cada evento de puntero
+    sprite.setInteractive({ useHandCursor: true }) // hit area = bounding box del sprite; el PNG está recortado a su contenido real, así que coincide con lo que se ve
     sprite.on('pointerdown', () => this.handlePoke())
 
     this.pusheenSprite = sprite
@@ -41,22 +39,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   /**
-   * El ancho objetivo se calcula sobre el lado menor de la pantalla (no un
-   * px fijo). En mobile usa una proporción mucho mayor para que Pusheen se
-   * vea prominente; en desktop una proporción menor con tope absoluto para
-   * que no quede gigante en pantallas anchas. En todos los casos se acota
-   * contra el ancho real de pantalla menos un margen, para que nunca se
-   * corte en los bordes de pantallas angostas.
+   * El ancho objetivo es siempre una proporción de this.scale.width (no del
+   * tamaño original del PNG), así el sprite se ve igual de grande en
+   * cualquier dispositivo. Se acota con un tope absoluto (evita upscale más
+   * allá de la resolución nativa en pantallas muy anchas) y con un margen
+   * de borde (evita que se corte en pantallas angostas).
    */
-  computeBaseScale(screenWidth, screenHeight, textureWidth) {
-    const minDimension = Math.min(screenWidth, screenHeight)
-    const isMobile = minDimension < MOBILE_BREAKPOINT
-    const ratio = isMobile ? PUSHEEN_WIDTH_RATIO_MOBILE : PUSHEEN_WIDTH_RATIO_DESKTOP
-
-    let targetWidth = minDimension * ratio
-    if (!isMobile) {
-      targetWidth = Math.min(targetWidth, PUSHEEN_MAX_WIDTH)
-    }
+  computeBaseScale(screenWidth, textureWidth) {
+    let targetWidth = screenWidth * PUSHEEN_WIDTH_RATIO
+    targetWidth = Math.min(targetWidth, PUSHEEN_MAX_WIDTH)
     targetWidth = Math.min(targetWidth, screenWidth - EDGE_MARGIN * 2)
 
     return targetWidth / textureWidth
@@ -96,11 +87,7 @@ export class MainScene extends Phaser.Scene {
   handleResize(gameSize) {
     if (!this.pusheenSprite) return
 
-    this.baseScale = this.computeBaseScale(
-      gameSize.width,
-      gameSize.height,
-      this.pusheenSprite.width
-    )
+    this.baseScale = this.computeBaseScale(gameSize.width, this.pusheenSprite.width)
 
     // Snap directo en vez de tween: evitamos pelear con el tween de idle
     // que sigue corriendo apuntando a la escala vieja.
