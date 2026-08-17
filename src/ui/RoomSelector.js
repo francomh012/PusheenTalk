@@ -1,18 +1,28 @@
-const BUTTON_HEIGHT = 40
-const BUTTON_MAX_WIDTH = 140
-const BUTTON_GAP = 8
+import Phaser from 'phaser'
+
+const BUTTON_MAX_DIAMETER = 52
+const BUTTON_GAP = 14
 const TOP_MARGIN = 16
-const INACTIVE_BG_COLOR = 0x000000
-const INACTIVE_BG_ALPHA = 0.45
-const ACTIVE_BG_ALPHA = 0.75
+const BG_CIRCLE_COLOR = 0x000000
+const BG_CIRCLE_ALPHA = 0.25
 const ACTIVE_BORDER_COLOR = 0xffffff
+const ACTIVE_BORDER_WIDTH = 3
+const INACTIVE_ICON_ALPHA = 0.55
+const ACTIVE_ICON_ALPHA = 1
 
 /**
  * RoomSelector.js
- * Fila de botones para elegir habitación activa. Solo presentación: no
- * conoce el estado real del juego, solo emite 'room:changed' por el
- * EventBus cuando el jugador toca un botón. Necesita `scene` porque es
- * quien crea los game objects (rectángulos y texto) que dibuja.
+ * Fila de botones circulares (íconos) para elegir habitación activa. Solo
+ * presentación: no conoce el estado real del juego, solo emite
+ * 'room:changed' por el EventBus cuando el jugador toca un ícono. Necesita
+ * `scene` porque es quien crea los game objects que dibuja.
+ *
+ * El recorte circular ya viene horneado en los PNG de src/assets/icons/
+ * (transparentes fuera del círculo) — no se enmascara en runtime. Phaser 4
+ * deprecó GeometryMask en WebGL en favor de un sistema de filtros cuyo
+ * bounding box no coincide con el tamaño visual deseado para sprites con
+ * aspecto no cuadrado, así que hornear la máscara en el asset es más simple
+ * y robusto que pelear con esa API.
  */
 export class RoomSelector {
   /**
@@ -26,24 +36,22 @@ export class RoomSelector {
     this.eventBus = eventBus
     this.rooms = rooms
     this.activeRoomId = activeRoomId
-    this.entries = [] // { room, bg, label }
+    this.entries = [] // { room, bg, icon, ring }
 
     this.build()
   }
 
   build() {
     this.entries = this.rooms.map((room) => {
-      const bg = this.scene.add.rectangle(0, 0, BUTTON_MAX_WIDTH, BUTTON_HEIGHT, INACTIVE_BG_COLOR)
+      const bg = this.scene.add.circle(0, 0, BUTTON_MAX_DIAMETER / 2, BG_CIRCLE_COLOR, BG_CIRCLE_ALPHA)
       bg.on('pointerdown', () => this.select(room.id))
 
-      const label = this.scene.add.text(0, 0, room.nombre, {
-        fontFamily: 'sans-serif',
-        fontSize: '14px',
-        color: '#ffffff',
-      })
-      label.setOrigin(0.5)
+      const icon = this.scene.add.sprite(0, 0, room.iconKey)
 
-      return { room, bg, label }
+      const ring = this.scene.add.circle(0, 0, BUTTON_MAX_DIAMETER / 2)
+      ring.setFillStyle() // solo borde, sin relleno
+
+      return { room, bg, icon, ring }
     })
 
     this.layout(this.scene.scale.width)
@@ -53,35 +61,41 @@ export class RoomSelector {
   /** Recalcula tamaño y posición de los botones para el ancho de pantalla dado. */
   layout(screenWidth) {
     const count = this.entries.length
-    const buttonWidth = Math.min(
-      BUTTON_MAX_WIDTH,
+    const diameter = Math.min(
+      BUTTON_MAX_DIAMETER,
       (screenWidth - BUTTON_GAP * (count + 1)) / count
     )
-    const totalWidth = buttonWidth * count + BUTTON_GAP * (count - 1)
-    let x = (screenWidth - totalWidth) / 2 + buttonWidth / 2
-    const y = TOP_MARGIN + BUTTON_HEIGHT / 2
+    const totalWidth = diameter * count + BUTTON_GAP * (count - 1)
+    let x = (screenWidth - totalWidth) / 2 + diameter / 2
+    const y = TOP_MARGIN + diameter / 2
+    const radius = diameter / 2
 
-    this.entries.forEach(({ bg, label }) => {
-      bg.setSize(buttonWidth, BUTTON_HEIGHT)
+    this.entries.forEach(({ bg, icon, ring }) => {
+      bg.setRadius(radius)
       bg.setPosition(x, y)
-      // El hit area de un Shape se fija al llamar setInteractive — si el
-      // tamaño cambia después (resize), hay que actualizarlo a mano.
       if (bg.input) {
-        bg.input.hitArea.setTo(0, 0, buttonWidth, BUTTON_HEIGHT)
+        bg.input.hitArea.setTo(0, 0, radius)
       } else {
-        bg.setInteractive({ useHandCursor: true })
+        bg.setInteractive(new Phaser.Geom.Circle(0, 0, radius), Phaser.Geom.Circle.Contains)
       }
 
-      label.setPosition(x, y)
-      x += buttonWidth + BUTTON_GAP
+      // El PNG ya es circular y cuadrado (1:1), así que basta con un
+      // tamaño de despliegue uniforme — sin distorsión posible.
+      icon.setDisplaySize(diameter, diameter)
+      icon.setPosition(x, y)
+
+      ring.setRadius(radius)
+      ring.setPosition(x, y)
+
+      x += diameter + BUTTON_GAP
     })
   }
 
   refreshStyles() {
-    this.entries.forEach(({ room, bg }) => {
+    this.entries.forEach(({ room, icon, ring }) => {
       const isActive = room.id === this.activeRoomId
-      bg.setFillStyle(INACTIVE_BG_COLOR, isActive ? ACTIVE_BG_ALPHA : INACTIVE_BG_ALPHA)
-      bg.setStrokeStyle(isActive ? 2 : 0, ACTIVE_BORDER_COLOR)
+      icon.setAlpha(isActive ? ACTIVE_ICON_ALPHA : INACTIVE_ICON_ALPHA)
+      ring.setStrokeStyle(isActive ? ACTIVE_BORDER_WIDTH : 0, ACTIVE_BORDER_COLOR)
     })
   }
 
