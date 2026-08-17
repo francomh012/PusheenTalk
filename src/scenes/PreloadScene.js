@@ -1,6 +1,9 @@
 import Phaser from 'phaser'
 import pusheenSprite from '../assets/sprites/pusheen.png'
-import bedroomBg from '../assets/backgrounds/habitacion.jpg'
+
+// La imagen de fondo (src/assets/backgrounds/habitacion.jpg) queda sin usar
+// por ahora — las habitaciones se dibujan con colores planos (ver
+// config/rooms.js) hasta que haya assets reales por habitación.
 
 /**
  * PreloadScene.js
@@ -16,7 +19,6 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     this.load.image('pusheen', pusheenSprite)
-    this.load.image('bedroom-bg', bedroomBg)
   }
 
   create() {

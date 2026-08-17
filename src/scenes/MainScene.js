@@ -1,20 +1,26 @@
 import Phaser from 'phaser'
+import { ROOMS, DEFAULT_ROOM_ID } from '../config/rooms.js'
+import { RoomSelector } from '../ui/RoomSelector.js'
 
 const PUSHEEN_TARGET_WIDTH = 240 // px fijo — tamaño visual consistente en cualquier dispositivo, no proporcional a la pantalla
 const EDGE_MARGIN = 24 // px mínimos libres a cada lado; solo entra en juego en pantallas más angostas que el target + margen
+const WALL_HEIGHT_RATIO = 0.7 // proporción de la altura que ocupa la pared; el resto es piso
 
 /**
  * MainScene.js
- * Solo presentación: dibuja el fondo y a Pusheen, maneja input y tweens.
- * No sabe nada de estado de juego — al detectar el poke, avisa por el
- * EventBus y deja que Pusheen.js (entities) decida qué significa.
+ * Solo presentación: dibuja la habitación activa (pared + piso) y a
+ * Pusheen, maneja input y tweens. No sabe nada de estado de juego más
+ * allá de qué habitación mostrar — el cambio de habitación se recibe y
+ * se comunica por el EventBus, no por referencias directas.
  */
 export class MainScene extends Phaser.Scene {
   /** @param {import('../core/EventBus.js').EventBus} eventBus */
   constructor(eventBus) {
     super('MainScene')
     this.eventBus = eventBus
-    this.background = null
+    this.roomBackground = null
+    this.activeRoomId = DEFAULT_ROOM_ID
+    this.roomSelector = null
     this.pusheenSprite = null
     this.baseScale = 1
     this.idleTween = null
@@ -23,10 +29,9 @@ export class MainScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale
 
-    // Se agrega primero para quedar detrás de Pusheen (orden de inserción = orden de render).
-    const background = this.add.image(width / 2, height / 2, 'bedroom-bg')
-    this.background = background
-    this.applyCoverScale(background, width, height)
+    // Se agrega primero para quedar detrás de todo lo demás (orden de inserción = orden de render).
+    this.roomBackground = this.add.graphics()
+    this.drawRoomBackground(width, height)
 
     const sprite = this.add.sprite(width / 2, height / 2, 'pusheen')
 
@@ -40,18 +45,29 @@ export class MainScene extends Phaser.Scene {
 
     this.startIdleAnimation()
 
+    this.roomSelector = new RoomSelector(this, this.eventBus, ROOMS, this.activeRoomId)
+
+    this.eventBus.on('room:changed', ({ roomId }) => this.handleRoomChanged(roomId))
+
     this.scale.on('resize', this.handleResize, this)
   }
 
-  /**
-   * Escala "cover": cubre toda la pantalla sin distorsionar proporciones,
-   * recortando el sobrante. Se usa el mayor de los dos ratios (ancho y
-   * alto) para que ningún lado quede con espacio vacío.
-   */
-  applyCoverScale(image, screenWidth, screenHeight) {
-    const coverScale = Math.max(screenWidth / image.width, screenHeight / image.height)
-    image.setScale(coverScale)
-    image.setPosition(screenWidth / 2, screenHeight / 2)
+  /** Dibuja la pared (arriba) y el piso (abajo) de la habitación activa. */
+  drawRoomBackground(screenWidth, screenHeight) {
+    const room = ROOMS.find((r) => r.id === this.activeRoomId)
+    const wallHeight = screenHeight * WALL_HEIGHT_RATIO
+    const floorHeight = screenHeight - wallHeight
+
+    this.roomBackground.clear()
+    this.roomBackground.fillStyle(room.colorPared, 1)
+    this.roomBackground.fillRect(0, 0, screenWidth, wallHeight)
+    this.roomBackground.fillStyle(room.colorPiso, 1)
+    this.roomBackground.fillRect(0, wallHeight, screenWidth, floorHeight)
+  }
+
+  handleRoomChanged(roomId) {
+    this.activeRoomId = roomId
+    this.drawRoomBackground(this.scale.width, this.scale.height)
   }
 
   /**
@@ -101,8 +117,10 @@ export class MainScene extends Phaser.Scene {
   handleResize(gameSize) {
     if (!this.pusheenSprite) return
 
-    if (this.background) {
-      this.applyCoverScale(this.background, gameSize.width, gameSize.height)
+    this.drawRoomBackground(gameSize.width, gameSize.height)
+
+    if (this.roomSelector) {
+      this.roomSelector.handleResize(gameSize.width)
     }
 
     this.baseScale = this.computeBaseScale(gameSize.width, this.pusheenSprite.width)
