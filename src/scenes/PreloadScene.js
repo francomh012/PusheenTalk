@@ -1,9 +1,10 @@
 import Phaser from 'phaser'
+import pusheenSprite from '../assets/sprites/pusheen.png'
 
 /**
  * PreloadScene.js
- * Escena de carga. Todavía sin assets reales — cuando existan sprites/audio
- * definitivos, sus llamadas a this.load.* van acá, antes de pasar a MainScene.
+ * Escena de carga. Los assets definitivos se cargan acá antes de pasar
+ * a MainScene.
  */
 export class PreloadScene extends Phaser.Scene {
   /** @param {import('../core/EventBus.js').EventBus} eventBus */
@@ -13,7 +14,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    // placeholder: sin assets todavía
+    this.load.image('pusheen', pusheenSprite)
   }
 
   create() {
