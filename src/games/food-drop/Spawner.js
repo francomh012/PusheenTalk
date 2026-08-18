@@ -19,13 +19,13 @@ import { Item } from './Item.js'
 
 /**
  * Spawner.js
- * Porta food-drop-v2/src/core/Spawner.js sin cambios de balance — solo
- * recibe `scene` en vez de un `container` del DOM para poder instanciar
- * Items (que ahora crean Phaser.Image en vez de <img>).
+ * Porta food-drop-v2/src/core/Spawner.js sin cambios de balance. `container`
+ * ahora es un Phaser.GameObjects.Container (la capa donde caen los items,
+ * equivalente al div #falling-layer original) en vez de un nodo del DOM.
  */
 export class Spawner {
-  constructor({ scene }) {
-    this.scene = scene
+  constructor({ container }) {
+    this.container = container
     this.spawnTimer = 0
     this.currentPhaseIndex = -1
   }
@@ -93,6 +93,6 @@ export class Spawner {
     const speed = Math.min(MAX_FALL_SPEED, BASE_FALL_SPEED + elapsed * SPEED_RAMP)
     const rotationSpeed = ROTATION_SPEED_MIN + Math.random() * (ROTATION_SPEED_MAX - ROTATION_SPEED_MIN)
 
-    return new Item({ scene: this.scene, kind, key, x, speed, rotationSpeed })
+    return new Item({ container: this.container, kind, key, x, speed, rotationSpeed })
   }
 }

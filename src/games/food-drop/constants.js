@@ -63,6 +63,14 @@ export const ROTATION_SPEED_MAX = 90 // deg/s
 
 export const KEY_MOVE_SPEED = 480 // px/s
 
+// ---------- Container ----------
+
+// food-drop-v2/style.css: #app { max-width: 480px; height: 100%/100dvh }
+// El área de juego original nunca ocupaba más de 480px de ancho, aunque la
+// pantalla fuera más ancha (quedaba centrada, con "letterbox" a los costados).
+// El alto sí era el del viewport completo, sin tope.
+export const CONTAINER_MAX_WIDTH = 480
+
 // ---------- Colors ----------
 
 export const COLORS = {

@@ -1,15 +1,22 @@
 import { ITEM_SIZE, ITEM_HITBOX_SIZE, ITEM_HITBOX_OFFSET } from './constants.js'
+import { containFit } from './containFit.js'
 
 /**
  * Item.js
  * Comida que cae. Porta food-drop-v2/src/entities/Item.js: ahí la posición
- * se manejaba como top-left (x,y) + CSS transform sobre un <img>; acá se
- * mantiene el mismo sistema de coordenadas top-left para reusar getHitbox()
- * / getVisualBottom() sin cambios, y se refleja en un Phaser.Image con
- * origin (0,0) en vez de mover un elemento del DOM.
+ * se manejaba como top-left (x,y) de una caja lógica de ITEM_SIZE x ITEM_SIZE
+ * (ese sistema de coordenadas se mantiene sin cambios para reusar
+ * getHitbox()/getVisualBottom() tal cual — la física no se toca).
+ *
+ * La imagen dentro de esa caja usa origin (0.5, 0.5) + containFit en vez de
+ * setDisplaySize(ITEM_SIZE, ITEM_SIZE): así replica `object-fit: contain`
+ * (los PNG son 2816x1536, no cuadrados, y CSS los ajustaba sin deformarlos)
+ * y además hace que la rotación gire sobre el centro del ítem, igual que
+ * `transform: rotate()` en CSS (que rota sobre transform-origin 50% 50% por
+ * defecto) — con origin (0,0) rotaba sobre la esquina, distinto al original.
  */
 export class Item {
-  constructor({ scene, kind, key, x, speed, rotationSpeed }) {
+  constructor({ container, kind, key, x, speed, rotationSpeed }) {
     this.kind = kind
     this.x = x
     this.y = -ITEM_SIZE
@@ -18,15 +25,23 @@ export class Item {
     this.rotationSpeed = rotationSpeed
     this.done = false
 
-    this.sprite = scene.add.image(x, this.y, key)
-    this.sprite.setOrigin(0, 0)
-    this.sprite.setDisplaySize(ITEM_SIZE, ITEM_SIZE)
+    this.sprite = container.scene.add.image(0, 0, key)
+    this.sprite.setOrigin(0.5, 0.5)
+    const { width, height } = containFit(ITEM_SIZE, ITEM_SIZE, this.sprite.width, this.sprite.height)
+    this.sprite.setDisplaySize(width, height)
+    container.add(this.sprite)
+
+    this.render()
   }
 
   update(dt) {
     this.y += this.speed * dt
     this.rotation += this.rotationSpeed * dt
-    this.sprite.setPosition(this.x, this.y)
+    this.render()
+  }
+
+  render() {
+    this.sprite.setPosition(this.x + ITEM_SIZE / 2, this.y + ITEM_SIZE / 2)
     this.sprite.setAngle(this.rotation)
   }
 
