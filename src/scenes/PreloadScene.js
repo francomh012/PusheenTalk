@@ -4,6 +4,7 @@ import iconJuegos from '../assets/icons/juegos.png'
 import iconDormitorio from '../assets/icons/dormitorio.png'
 import iconCocina from '../assets/icons/cocina.png'
 import iconBano from '../assets/icons/bano.png'
+import { FOOD_DROP_ASSETS } from '../games/food-drop/assets.js'
 
 // La imagen de fondo (src/assets/backgrounds/habitacion.jpg) queda sin usar
 // por ahora — las habitaciones se dibujan con colores planos (ver
@@ -27,6 +28,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('icon-dormitorio', iconDormitorio)
     this.load.image('icon-cocina', iconCocina)
     this.load.image('icon-bano', iconBano)
+
+    Object.entries(FOOD_DROP_ASSETS).forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {

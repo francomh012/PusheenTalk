@@ -47,9 +47,45 @@ export class MainScene extends Phaser.Scene {
 
     this.roomSelector = new RoomSelector(this, this.eventBus, ROOMS, this.activeRoomId)
 
+    this.playButton = this.buildPlayButton()
+    this.refreshPlayButtonVisibility()
+
     this.eventBus.on('room:changed', ({ roomId }) => this.handleRoomChanged(roomId))
 
     this.scale.on('resize', this.handleResize, this)
+  }
+
+  /** Botón "Jugar" — solo visible en la habitación "juegos", lanza FoodDropScene. */
+  buildPlayButton() {
+    const container = this.add.container(0, 0)
+    const bg = this.add
+      .rectangle(0, 0, 160, 48, 0xffb7c5)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+    const label = this.add
+      .text(0, 0, 'JUGAR', {
+        fontFamily: 'sans-serif',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#5c3d2e',
+      })
+      .setOrigin(0.5)
+
+    bg.on('pointerover', () => bg.setFillStyle(0xffcbd9))
+    bg.on('pointerout', () => bg.setFillStyle(0xffb7c5))
+    bg.on('pointerdown', () => this.scene.start('FoodDropScene'))
+
+    container.add([bg, label])
+    this.positionPlayButton(container, this.scale.width, this.scale.height)
+    return container
+  }
+
+  positionPlayButton(container, screenWidth, screenHeight) {
+    container.setPosition(screenWidth / 2, screenHeight * WALL_HEIGHT_RATIO + 40)
+  }
+
+  refreshPlayButtonVisibility() {
+    this.playButton.setVisible(this.activeRoomId === 'juegos')
   }
 
   /** Dibuja la pared (arriba) y el piso (abajo) de la habitación activa. */
@@ -68,6 +104,7 @@ export class MainScene extends Phaser.Scene {
   handleRoomChanged(roomId) {
     this.activeRoomId = roomId
     this.drawRoomBackground(this.scale.width, this.scale.height)
+    this.refreshPlayButtonVisibility()
   }
 
   /**
@@ -121,6 +158,10 @@ export class MainScene extends Phaser.Scene {
 
     if (this.roomSelector) {
       this.roomSelector.handleResize(gameSize.width)
+    }
+
+    if (this.playButton) {
+      this.positionPlayButton(this.playButton, gameSize.width, gameSize.height)
     }
 
     this.baseScale = this.computeBaseScale(gameSize.width, this.pusheenSprite.width)
